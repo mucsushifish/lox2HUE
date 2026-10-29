@@ -1,0 +1,5 @@
+#!/bin/bash
+# Runs as root on uninstall. Plugin folders are removed by LoxBerry.
+PDIR=$3
+pkill -f "$LBPBIN/$PDIR/lox2hued.pl" 2>/dev/null
+exit 0

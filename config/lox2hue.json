@@ -1,0 +1,25 @@
+{
+	"bridge": {
+		"driver": "huev2",
+		"host": "",
+		"user": "",
+		"https": "1"
+	},
+	"mqtt": {
+		"topic": "lox2hue"
+	},
+	"timing": {
+		"transition_ms": "1000",
+		"dimmer_min": "15",
+		"dimmer_max": "100",
+		"enable_burst": "1",
+		"burst_ms": "1000,2000,3500,5000,8000",
+		"enable_watch": "1",
+		"watch_cut_lamps": "0",
+		"watch_step_ms": "1500",
+		"watch_settle_ms": "3000",
+		"watch_max_fixes": "3",
+		"off_repeat_ms": "30000"
+	},
+	"channels": []
+}
