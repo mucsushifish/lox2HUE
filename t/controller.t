@@ -83,13 +83,13 @@ run_until(160000);
 @s = grep { $_->[2]{transition_ms} == 0 } $drv->take;
 is(scalar @s, 0, 'watch: no resend when state matches');
 
-# lamp offline then back -> burst
+# lamp offline then back (found by watching) -> send at once, then 2 confirmations
 $drv->{state}{3} = { reachable => 0, on => 0 };
 run_until(165000);
 $drv->{state}{3} = { reachable => 1, on => 1, bri => 254, colormode => 'hs', hue => 0, sat => 254 };
 run_until(175000);
 @s = $drv->take;
-is(scalar @s, 5, 'back online: burst of 5');
+is(scalar @s, 3, 'back online: immediate send plus 2 confirmations');
 
 # channel 6 shares the slot of channel 1 (same lamp)
 $c->value('6', 0);
@@ -108,5 +108,37 @@ $c->all_off;
 $drv->take;
 run_until($t + 10000);
 is(scalar $drv->take, 0, 'all off cancels running bursts');
+
+# Driver with events (API v2), as in the log of 2026-10-29: a lamp whose power
+# Loxone switches is unreachable when switched on and reported back ~2.7 s later
+package EventDriver {
+	our @ISA = ('FakeDriver');
+	sub changed { my ($s) = @_; my @c = @{ $s->{changed} || [] }; $s->{changed} = []; @c }
+}
+my $ed = EventDriver->new;
+$t = 0;
+my $ec = Lox2Hue::Controller->new(
+	driver   => $ed,
+	now      => sub { $t },
+	channels => [ { id => '3', type => 'rgb_xy', target_id => 2, powermode => 'cut' } ],
+);
+$ed->{state}{2} = { reachable => 0, on => 0 };
+$ec->value('3', 64078084);
+is(scalar $ed->take, 1, 'event driver: first send at once');
+for (1 .. 27) { $t += 100; $ec->tick }
+$ed->take;
+$ed->{state}{2} = { reachable => 1, on => 0 };
+$ed->{changed} = [ 2 ];
+$t += 100;
+$ec->tick;
+my @now = $ed->take;
+is(scalar @now, 1, 'event driver: command sent on the connected event');
+is($now[0][2]{transition_ms}, 0, 'without transition');
+$t += 900;  $ec->tick;
+is(scalar $ed->take, 0, 'remaining power-on burst replaced');
+$t += 100;  $ec->tick;
+is(scalar $ed->take, 1, 'confirmation after 1 s');
+for (1 .. 50) { $t += 100; $ec->tick }
+is(scalar $ed->take, 1, 'second confirmation, then quiet');
 
 done_testing();
