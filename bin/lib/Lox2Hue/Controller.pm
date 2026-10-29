@@ -94,6 +94,12 @@ sub _new_slot {
 
 sub channel_ids { return @{ $_[0]{order} }; }
 
+# Type of an active channel, undef if unknown or disabled
+sub channel_type {
+	my ($self, $id) = @_;
+	return $self->{channels}{$id} ? $self->{channels}{$id}{type} : undef;
+}
+
 # Input from Loxone for a channel
 sub value {
 	my ($self, $id, $value) = @_;

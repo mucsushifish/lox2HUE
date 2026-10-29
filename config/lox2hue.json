@@ -21,5 +21,6 @@
 		"watch_max_fixes": "3",
 		"off_repeat_ms": "30000"
 	},
-	"channels": []
+	"channels": [],
+	"wakeups": []
 }

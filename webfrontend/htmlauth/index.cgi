@@ -32,6 +32,7 @@ my @TYPES      = qw(rgb_hs rgb_xy brightness bulb onoff);
 my @TARGETS    = qw(light group);
 my @POWERMODES = qw(normal cut plug);
 my @DRIVERS    = qw(huev2 huev1);
+my @WAKE_TYPES = qw(rgb_hs rgb_xy brightness bulb);
 
 # Query string parameters; with a JSON POST body CGI->Vars does not contain them
 my $ajax = $cgi->url_param('ajax') // $q->{ajax};
@@ -208,5 +209,37 @@ sub validate {
 		};
 	}
 	$out{channels} = \@channels;
+
+	my (@wakeups, %wseen);
+	my %lamp_type = map { $_->{id} => $_->{type} } @channels;
+	for my $w (@{ $in->{wakeups} || [] }) {
+		my $id = $w->{id} // '';
+		return (undef, "invalid light alarm id '$id'") if $id !~ /^[A-Za-z0-9_\-]+$/ || $id eq 'alloff';
+		return (undef, "light alarm $id: id is already used by a channel") if $seen{$id};
+		return (undef, "duplicate light alarm id '$id'") if $wseen{$id}++;
+		my $ch = $w->{channel} // '';
+		return (undef, "light alarm $id: lamp channel '$ch' does not exist") if !$lamp_type{$ch};
+		return (undef, "light alarm $id: channel $ch cannot be dimmed up") if !grep { $_ eq $lamp_type{$ch} } @WAKE_TYPES;
+		my $ramp = $w->{ramp_min} // '';
+		return (undef, "light alarm $id: fade-up time must be 1-240 minutes") if $ramp !~ /^\d+$/ || $ramp < 1 || $ramp > 240;
+		my %col;
+		for my $k (qw(r g b)) {
+			my $v = $w->{$k} // '';
+			return (undef, "light alarm $id: colour values must be 0-100") if $v !~ /^\d+$/ || $v > 100;
+			$col{$k} = $v;
+		}
+		return (undef, "light alarm $id: target colour is black") if $lamp_type{$ch} =~ /^rgb/ && !($col{r} + $col{g} + $col{b});
+		my $name = $w->{name} // '';
+		$name =~ s/[<>"&\x00-\x1f]//g;
+		push @wakeups, {
+			id       => $id,
+			name     => substr($name, 0, 40),
+			enabled  => is_enabled($w->{enabled}) ? '1' : '0',
+			channel  => $ch,
+			ramp_min => $ramp,
+			%col,
+		};
+	}
+	$out{wakeups} = \@wakeups;
 	return (\%out, undef);
 }
