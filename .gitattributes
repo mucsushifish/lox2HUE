@@ -1,0 +1,14 @@
+# Scripts run on Linux (LoxBerry); CRLF line endings break the interpreter line
+* text=auto
+*.sh    text eol=lf
+*.cgi   text eol=lf
+*.pl    text eol=lf
+*.pm    text eol=lf
+*.t     text eol=lf
+*.cfg   text eol=lf
+*.ini   text eol=lf
+*.html  text eol=lf
+*.json  text eol=lf
+daemon/daemon       text eol=lf
+uninstall/uninstall text eol=lf
+*.png   binary

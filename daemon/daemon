@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Executed as root at LoxBerry boot. Starts the lox2hue daemon as user loxberry
+# in the background. REPLACELBPBINDIR is replaced by the plugin installer.
+
+DAEMON=REPLACELBPBINDIR/lox2hued.pl
+
+pkill -f "$DAEMON" 2>/dev/null
+
+if [ -x "$DAEMON" ]; then
+	su loxberry -s /bin/bash -c "nohup $DAEMON >/dev/null 2>&1 &"
+	/usr/bin/logger "LoxBerry plugin lox2hue: daemon started"
+fi
+
+exit 0

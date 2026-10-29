@@ -1,0 +1,410 @@
+<div class="lb-content">
+
+<form id="mainform" onsubmit="saveConfig(); return false;">
+
+<!-- ============================================================ BRIDGE -->
+<h2 class="lb-section-title"><TMPL_VAR MAIN.H_BRIDGE></h2>
+
+<div class="lb-form-row">
+	<label class="lb-form-label" for="bridge_driver"><TMPL_VAR MAIN.LBL_DRIVER></label>
+	<div class="lb-form-field">
+		<select class="lb-select" id="bridge_driver">
+			<option value="huev2"><TMPL_VAR MAIN.DRIVER_HUEV2></option>
+			<option value="huev1"><TMPL_VAR MAIN.DRIVER_HUEV1></option>
+		</select>
+	</div>
+</div>
+<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_DRIVER></div>
+<div class="lb-form-row">
+	<label class="lb-form-label" for="bridge_host"><TMPL_VAR MAIN.LBL_HOST></label>
+	<div class="lb-form-field">
+		<input class="lb-input" type="text" id="bridge_host" placeholder="192.168.1.20">
+	</div>
+</div>
+<div class="lb-form-row v1-only">
+	<label class="lb-form-label" for="bridge_https"><TMPL_VAR MAIN.LBL_HTTPS></label>
+	<div class="lb-form-field">
+		<label class="lb-toggle">
+			<input type="checkbox" id="bridge_https">
+			<span class="lb-toggle-slider"></span>
+		</label>
+	</div>
+</div>
+<div class="lb-form-help hint v1-only"><TMPL_VAR MAIN.HELP_HTTPS></div>
+<div class="lb-form-row">
+	<label class="lb-form-label" for="bridge_user"><TMPL_VAR MAIN.LBL_USER></label>
+	<div class="lb-form-field">
+		<input class="lb-input" type="text" id="bridge_user">
+	</div>
+</div>
+<div class="lb-callout">
+	<span class="lb-callout-title"><TMPL_VAR MAIN.PAIR_TITLE></span>
+	<p><TMPL_VAR MAIN.PAIR_TEXT></p>
+	<button type="button" class="lb-btn lb-btn-icon" onclick="pairBridge();"><i class="pi pi-link"></i> <TMPL_VAR MAIN.BTN_PAIR></button>
+	<span id="pair-status"></span>
+</div>
+
+<!-- ============================================================ LOXONE -->
+<h2 class="lb-section-title"><TMPL_VAR MAIN.H_LOXONE></h2>
+
+<div class="lb-form-row">
+	<label class="lb-form-label" for="mqtt_topic"><TMPL_VAR MAIN.LBL_TOPIC></label>
+	<div class="lb-form-field">
+		<input class="lb-input" type="text" id="mqtt_topic" placeholder="lox2hue">
+	</div>
+</div>
+<div class="lb-callout">
+	<span class="lb-callout-title"><TMPL_VAR MAIN.LOXONE_TITLE></span>
+	<p><TMPL_VAR MAIN.LOXONE_UDP></p>
+	<p><code id="example-udp"></code></p>
+	<p><TMPL_VAR MAIN.LOXONE_HTTP></p>
+	<p><code id="example-http"></code></p>
+	<p><TMPL_VAR MAIN.LOXONE_ALLOFF></p>
+</div>
+
+<!-- ============================================================ CHANNELS -->
+<h2 class="lb-section-title"><TMPL_VAR MAIN.H_CHANNELS></h2>
+<p><TMPL_VAR MAIN.CHANNELS_INTRO></p>
+
+<div class="lb-table-scroll">
+<table class="lb-table" id="channels">
+	<thead>
+		<tr>
+			<th><TMPL_VAR MAIN.COL_ACTIVE></th>
+			<th><TMPL_VAR MAIN.COL_ID></th>
+			<th><TMPL_VAR MAIN.COL_NAME></th>
+			<th><TMPL_VAR MAIN.COL_TYPE></th>
+			<th><TMPL_VAR MAIN.COL_TARGET></th>
+			<th><TMPL_VAR MAIN.COL_TARGET_ID></th>
+			<th><TMPL_VAR MAIN.COL_POWER></th>
+			<th><TMPL_VAR MAIN.COL_CT></th>
+			<th></th>
+		</tr>
+	</thead>
+	<tbody></tbody>
+</table>
+</div>
+<p>
+	<button type="button" class="lb-btn lb-btn-sm lb-btn-icon" onclick="addChannel();"><i class="pi pi-plus"></i> <TMPL_VAR MAIN.BTN_ADD></button>
+	<button type="button" class="lb-btn lb-btn-sm lb-btn-icon" onclick="loadLights();"><i class="pi pi-refresh"></i> <TMPL_VAR MAIN.BTN_LIGHTS></button>
+	<span id="lights-status"></span>
+</p>
+<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_TYPES></div>
+<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_POWER></div>
+
+<!-- ============================================================ ADVANCED -->
+<details class="lb-collapsible">
+	<summary><TMPL_VAR MAIN.H_ADVANCED></summary>
+	<div class="lb-collapsible-content">
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="transition_ms"><TMPL_VAR MAIN.LBL_TRANSITION></label>
+			<div class="lb-form-field"><input class="lb-input" type="number" min="0" id="transition_ms"></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="dimmer_min"><TMPL_VAR MAIN.LBL_DIMMER></label>
+			<div class="lb-form-field lb-form-2col">
+				<input class="lb-input" type="number" min="0" max="99" id="dimmer_min">
+				<input class="lb-input" type="number" min="1" max="100" id="dimmer_max">
+			</div>
+		</div>
+		<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_DIMMER></div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="enable_burst"><TMPL_VAR MAIN.LBL_BURST></label>
+			<div class="lb-form-field">
+				<label class="lb-toggle"><input type="checkbox" id="enable_burst"><span class="lb-toggle-slider"></span></label>
+			</div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="burst_ms"><TMPL_VAR MAIN.LBL_BURST_MS></label>
+			<div class="lb-form-field"><input class="lb-input" type="text" id="burst_ms"></div>
+		</div>
+		<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_BURST></div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="enable_watch"><TMPL_VAR MAIN.LBL_WATCH></label>
+			<div class="lb-form-field">
+				<label class="lb-toggle"><input type="checkbox" id="enable_watch"><span class="lb-toggle-slider"></span></label>
+			</div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="watch_cut_lamps"><TMPL_VAR MAIN.LBL_WATCH_CUT></label>
+			<div class="lb-form-field">
+				<label class="lb-toggle"><input type="checkbox" id="watch_cut_lamps"><span class="lb-toggle-slider"></span></label>
+			</div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="watch_step_ms"><TMPL_VAR MAIN.LBL_WATCH_STEP></label>
+			<div class="lb-form-field"><input class="lb-input" type="number" min="100" id="watch_step_ms"></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="watch_settle_ms"><TMPL_VAR MAIN.LBL_WATCH_SETTLE></label>
+			<div class="lb-form-field"><input class="lb-input" type="number" min="0" id="watch_settle_ms"></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="watch_max_fixes"><TMPL_VAR MAIN.LBL_WATCH_FIXES></label>
+			<div class="lb-form-field"><input class="lb-input" type="number" min="0" id="watch_max_fixes"></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="off_repeat_ms"><TMPL_VAR MAIN.LBL_OFF_REPEAT></label>
+			<div class="lb-form-field"><input class="lb-input" type="number" min="0" id="off_repeat_ms"></div>
+		</div>
+		<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_OFF_REPEAT></div>
+	</div>
+</details>
+
+<div class="lb-actions">
+	<button type="submit" class="lb-btn lb-btn-primary lb-btn-icon"><i class="pi pi-save"></i> <TMPL_VAR MAIN.BTN_SAVE></button>
+</div>
+<div id="save-status" class="lb-callout" style="display:none;"></div>
+
+</form>
+
+<!-- ============================================================ TEST -->
+<details class="lb-collapsible">
+	<summary><TMPL_VAR MAIN.H_TEST></summary>
+	<div class="lb-collapsible-content">
+		<p><TMPL_VAR MAIN.TEST_INTRO></p>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="test_channel"><TMPL_VAR MAIN.COL_ID></label>
+			<div class="lb-form-field"><select class="lb-select" id="test_channel"></select></div>
+		</div>
+		<div class="lb-form-row">
+			<label class="lb-form-label" for="test_value"><TMPL_VAR MAIN.LBL_VALUE></label>
+			<div class="lb-form-field"><input class="lb-input" type="text" id="test_value" placeholder="100 = Rot, 0 = Aus"></div>
+		</div>
+		<button type="button" class="lb-btn lb-btn-icon" onclick="testChannel();"><i class="pi pi-send"></i> <TMPL_VAR MAIN.BTN_TEST></button>
+		<span id="test-status"></span>
+	</div>
+</details>
+
+<script>
+var i18n = {
+	saved:        "<TMPL_VAR MAIN.JS_SAVED>",
+	error:        "<TMPL_VAR MAIN.JS_ERROR>",
+	paired:       "<TMPL_VAR MAIN.JS_PAIRED>",
+	pairing:      "<TMPL_VAR MAIN.JS_PAIRING>",
+	noLights:     "<TMPL_VAR MAIN.JS_NO_LIGHTS>",
+	lightsLoaded: "<TMPL_VAR MAIN.JS_LIGHTS_LOADED>",
+	sent:         "<TMPL_VAR MAIN.JS_SENT>",
+	remove:       "<TMPL_VAR MAIN.BTN_REMOVE>",
+	types: {
+		rgb_hs:     "<TMPL_VAR MAIN.TYPE_RGB_HS>",
+		rgb_xy:     "<TMPL_VAR MAIN.TYPE_RGB_XY>",
+		brightness: "<TMPL_VAR MAIN.TYPE_BRIGHTNESS>",
+		bulb:       "<TMPL_VAR MAIN.TYPE_BULB>",
+		onoff:      "<TMPL_VAR MAIN.TYPE_ONOFF>"
+	},
+	targets: {
+		light: "<TMPL_VAR MAIN.TARGET_LIGHT>",
+		group: "<TMPL_VAR MAIN.TARGET_GROUP>"
+	},
+	power: {
+		normal: "<TMPL_VAR MAIN.POWER_NORMAL>",
+		cut:    "<TMPL_VAR MAIN.POWER_CUT>",
+		plug:   "<TMPL_VAR MAIN.POWER_PLUG>"
+	}
+};
+
+var lights = {};   // id -> name, from the bridge
+
+function esc(s) {
+	return $("<div>").text(s == null ? "" : String(s)).html();
+}
+
+function options(map, selected) {
+	return $.map(map, function(label, value) {
+		return '<option value="' + esc(value) + '"' + (String(value) === String(selected) ? ' selected' : '') + '>' + esc(label) + '</option>';
+	}).join("");
+}
+
+function targetIdField(ch) {
+	var ids = Object.keys(lights);
+	if (ch.target !== "group" && ids.length) {
+		var map = {};
+		ids.sort(function(a, b) { return a - b; }).forEach(function(id) { map[id] = id + " – " + lights[id]; });
+		if (ch.target_id && !(ch.target_id in map)) map[ch.target_id] = ch.target_id;
+		return '<select class="lb-select ch-target-id">' + options(map, ch.target_id) + '</select>';
+	}
+	return '<input class="lb-input ch-target-id" type="number" min="0" style="width:6em" value="' + esc(ch.target_id) + '">';
+}
+
+function channelRow(ch) {
+	return '<tr>' +
+		'<td><label class="lb-toggle"><input type="checkbox" class="ch-enabled"' + (ch.enabled === "0" ? '' : ' checked') + '><span class="lb-toggle-slider"></span></label></td>' +
+		'<td><input class="lb-input ch-id" type="text" style="width:5em" value="' + esc(ch.id) + '"></td>' +
+		'<td><input class="lb-input ch-name" type="text" value="' + esc(ch.name) + '"></td>' +
+		'<td><select class="lb-select ch-type">' + options(i18n.types, ch.type || "rgb_hs") + '</select></td>' +
+		'<td><select class="lb-select ch-target">' + options(i18n.targets, ch.target || "light") + '</select></td>' +
+		'<td class="ch-target-id-cell">' + targetIdField(ch) + '</td>' +
+		'<td><select class="lb-select ch-powermode">' + options(i18n.power, ch.powermode || "normal") + '</select></td>' +
+		'<td style="white-space:nowrap"><input class="lb-input ch-sim-min" type="number" min="153" max="500" style="width:5em" value="' + esc(ch.sim_min || 154) + '"> – ' +
+		'<input class="lb-input ch-sim-max" type="number" min="153" max="500" style="width:5em" value="' + esc(ch.sim_max || 500) + '"></td>' +
+		'<td><button type="button" class="lb-btn lb-btn-sm lb-btn-danger lb-btn-icon" title="' + esc(i18n.remove) + '" onclick="$(this).closest(\'tr\').remove(); updateTestChannels();"><i class="pi pi-trash"></i></button></td>' +
+		'</tr>';
+}
+
+function readChannels() {
+	return $("#channels tbody tr").map(function() {
+		var r = $(this);
+		return {
+			enabled:   r.find(".ch-enabled").is(":checked") ? "1" : "0",
+			id:        r.find(".ch-id").val().trim(),
+			name:      r.find(".ch-name").val().trim(),
+			type:      r.find(".ch-type").val(),
+			target:    r.find(".ch-target").val(),
+			target_id: String(r.find(".ch-target-id").val()).trim(),
+			powermode: r.find(".ch-powermode").val(),
+			sim_min:   r.find(".ch-sim-min").val(),
+			sim_max:   r.find(".ch-sim-max").val()
+		};
+	}).get();
+}
+
+function renderChannels(list) {
+	$("#channels tbody").html($.map(list, channelRow).join(""));
+	updateTestChannels();
+}
+
+function addChannel() {
+	var used = readChannels().map(function(c) { return c.id; });
+	var n = 1;
+	while (used.indexOf(String(n)) >= 0) n++;
+	$("#channels tbody").append(channelRow({ id: String(n), enabled: "1" }));
+	updateTestChannels();
+}
+
+function updateTestChannels() {
+	var map = {};
+	readChannels().forEach(function(c) { if (c.id) map[c.id] = c.id + (c.name ? " – " + c.name : ""); });
+	map.alloff = "alloff";
+	$("#test_channel").html(options(map, $("#test_channel").val()));
+}
+
+function updateExamples() {
+	var topic = $("#mqtt_topic").val().trim() || "lox2hue";
+	$("#example-udp").text(topic + "/1 <v>");
+	$("#example-http").text(location.protocol + "//" + location.host + "/plugins/<TMPL_VAR LBPPLUGINDIR>/set.cgi?ch=1&v=<v>");
+}
+
+function updateDriver() {
+	$(".v1-only").toggle($("#bridge_driver").val() === "huev1");
+}
+
+function status(id, msg, isError) {
+	$("#" + id).text(msg).css("color", isError ? "var(--lb-danger)" : "var(--lb-success)");
+}
+
+function loadConfig() {
+	$.getJSON("index.cgi?ajax=config", function(cfg) {
+		var b = cfg.bridge || {}, t = cfg.timing || {};
+		$("#bridge_driver").val(b.driver || "huev2");
+		updateDriver();
+		$("#bridge_host").val(b.host || "");
+		$("#bridge_user").val(b.user || "");
+		$("#bridge_https").prop("checked", b.https === "1");
+		$("#mqtt_topic").val((cfg.mqtt || {}).topic || "lox2hue");
+		["transition_ms", "dimmer_min", "dimmer_max", "burst_ms", "watch_step_ms", "watch_settle_ms", "watch_max_fixes", "off_repeat_ms"].forEach(function(k) {
+			$("#" + k).val(t[k]);
+		});
+		["enable_burst", "enable_watch", "watch_cut_lamps"].forEach(function(k) {
+			$("#" + k).prop("checked", t[k] === "1");
+		});
+		renderChannels(cfg.channels || []);
+		updateExamples();
+		if (b.host && b.user) loadLights(true);
+	}).fail(function(xhr) { showSave(i18n.error + " " + xhr.status, true); });
+}
+
+function loadLights(quiet) {
+	$.getJSON("index.cgi?ajax=lights", function(res) {
+		if (res.error || !res.lights || !Object.keys(res.lights).length) {
+			if (!quiet) status("lights-status", i18n.noLights + (res.error ? " (" + res.error + ")" : ""), true);
+			return;
+		}
+		lights = res.lights;
+		var current = readChannels();
+		renderChannels(current);
+		if (!quiet) status("lights-status", i18n.lightsLoaded.replace("%d", Object.keys(lights).length), false);
+	});
+}
+
+function collect() {
+	var cfg = {
+		bridge: {
+			driver: $("#bridge_driver").val(),
+			host:   $("#bridge_host").val().trim(),
+			user:   $("#bridge_user").val().trim(),
+			https:  $("#bridge_https").is(":checked") ? "1" : "0"
+		},
+		mqtt: { topic: $("#mqtt_topic").val().trim() || "lox2hue" },
+		timing: {},
+		channels: readChannels()
+	};
+	["transition_ms", "dimmer_min", "dimmer_max", "burst_ms", "watch_step_ms", "watch_settle_ms", "watch_max_fixes", "off_repeat_ms"].forEach(function(k) {
+		cfg.timing[k] = String($("#" + k).val()).trim();
+	});
+	["enable_burst", "enable_watch", "watch_cut_lamps"].forEach(function(k) {
+		cfg.timing[k] = $("#" + k).is(":checked") ? "1" : "0";
+	});
+	return cfg;
+}
+
+function showSave(msg, isError) {
+	$("#save-status").text(msg).toggleClass("lb-callout-warning", !!isError).show();
+	if (!isError) setTimeout(function() { $("#save-status").fadeOut(500); }, 2000);
+}
+
+function saveConfig() {
+	$.ajax({
+		url: "index.cgi?ajax=save", type: "POST", contentType: "application/json",
+		data: JSON.stringify(collect()), dataType: "json"
+	}).done(function() {
+		showSave(i18n.saved, false);
+		updateExamples();
+	}).fail(function(xhr) {
+		var err = (xhr.responseJSON && xhr.responseJSON.error) || xhr.status;
+		showSave(i18n.error + ": " + err, true);
+	});
+}
+
+function pairBridge() {
+	status("pair-status", i18n.pairing, false);
+	$.ajax({
+		url: "index.cgi?ajax=pair", type: "POST", contentType: "application/json", dataType: "json",
+		data: JSON.stringify({ host: $("#bridge_host").val().trim(), driver: $("#bridge_driver").val(), https: $("#bridge_https").is(":checked") ? "1" : "0" })
+	}).done(function(res) {
+		if (res.user) {
+			$("#bridge_user").val(res.user);
+			status("pair-status", i18n.paired, false);
+		} else {
+			status("pair-status", i18n.error + ": " + res.error, true);
+		}
+	}).fail(function(xhr) {
+		status("pair-status", i18n.error + ": " + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.status), true);
+	});
+}
+
+function testChannel() {
+	$.ajax({
+		url: "index.cgi?ajax=test", type: "POST", contentType: "application/json", dataType: "json",
+		data: JSON.stringify({ channel: $("#test_channel").val(), value: $("#test_value").val().trim() })
+	}).done(function() {
+		status("test-status", i18n.sent, false);
+	}).fail(function(xhr) {
+		status("test-status", i18n.error + ": " + ((xhr.responseJSON && xhr.responseJSON.error) || xhr.status), true);
+	});
+}
+
+$(function() {
+	$("#mqtt_topic").on("input", updateExamples);
+	$("#bridge_driver").on("change", updateDriver);
+	$("#channels").on("change", ".ch-target", function() {
+		var row = $(this).closest("tr");
+		var ch = { target: $(this).val(), target_id: String(row.find(".ch-target-id").val()) };
+		row.find(".ch-target-id-cell").html(targetIdField(ch));
+	});
+	$("#channels").on("input change", ".ch-id, .ch-name", updateTestChannels);
+	loadConfig();
+});
+</script>
+
+</div>
