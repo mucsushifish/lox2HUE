@@ -184,6 +184,7 @@ var i18n = {
 	pairing:      "<TMPL_VAR MAIN.JS_PAIRING>",
 	noLights:     "<TMPL_VAR MAIN.JS_NO_LIGHTS>",
 	lightsLoaded: "<TMPL_VAR MAIN.JS_LIGHTS_LOADED>",
+	channelsAdded: "<TMPL_VAR MAIN.JS_CHANNELS_ADDED>",
 	sent:         "<TMPL_VAR MAIN.JS_SENT>",
 	remove:       "<TMPL_VAR MAIN.BTN_REMOVE>",
 	types: {
@@ -272,6 +273,27 @@ function addChannel() {
 	updateTestChannels();
 }
 
+// One channel per lamp that no channel controls yet; the channel id is the lamp number if it is free
+function addLightChannels(list) {
+	var used = {}, targeted = {}, added = 0;
+	list.forEach(function(c) {
+		used[c.id] = 1;
+		if (c.target === "light") targeted[c.target_id] = 1;
+	});
+	Object.keys(lights).sort(function(a, b) { return a - b; }).forEach(function(id) {
+		if (targeted[id]) return;
+		var chId = id, n = 1;
+		if (used[chId]) {
+			while (used[String(n)]) n++;
+			chId = String(n);
+		}
+		used[chId] = 1;
+		list.push({ id: chId, name: lights[id], enabled: "1", type: "rgb_hs", target: "light", target_id: id, powermode: "normal" });
+		added++;
+	});
+	return added;
+}
+
 function updateTestChannels() {
 	var map = {};
 	readChannels().forEach(function(c) { if (c.id) map[c.id] = c.id + (c.name ? " – " + c.name : ""); });
@@ -322,8 +344,12 @@ function loadLights(quiet) {
 		}
 		lights = res.lights;
 		var current = readChannels();
+		// On page load only fill an empty list, so deliberately removed channels stay removed
+		var added = (!quiet || !current.length) ? addLightChannels(current) : 0;
 		renderChannels(current);
-		if (!quiet) status("lights-status", i18n.lightsLoaded.replace("%d", Object.keys(lights).length), false);
+		var msg = i18n.lightsLoaded.replace("%d", Object.keys(lights).length);
+		if (added) msg += ", " + i18n.channelsAdded.replace("%d", added);
+		if (!quiet || added) status("lights-status", msg, false);
 	});
 }
 
