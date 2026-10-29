@@ -6,6 +6,7 @@
 # raw value of a virtual output there, e.g. via UDP to the MQTT Gateway:
 #   lox2hue/1 37042011
 # <topic>/alloff with a value other than 0 switches all lights off.
+# Wake-up channels (light alarm) are handled by Lox2Hue::Wakeup.
 # The daemon converts the value and sends it to the bridge (see Lox2Hue::*).
 
 use strict;
@@ -18,6 +19,7 @@ use LoxBerry::IO;
 use LoxBerry::Log;
 use LoxBerry::JSON;
 use Lox2Hue::Controller;
+use Lox2Hue::Wakeup;
 use Lox2Hue::Driver::HueV1;
 use Lox2Hue::Driver::HueV2;
 
@@ -43,6 +45,7 @@ $SIG{TERM} = $SIG{INT} = sub { $running = 0; };
 
 my ($cfg, $cfg_mtime) = load_config();
 my $controller = build_controller($cfg);
+my $wakeup = build_wakeup($cfg, $controller);
 my $topic = $cfg->{mqtt}{topic} || 'lox2hue';
 
 my $mqtt = LoxBerry::IO::mqtt_connect();
@@ -60,6 +63,7 @@ while ($running) {
 	LOGERR("MQTT: $@") if $@;
 	sleep(0.05) if !$connected;
 
+	eval { $wakeup->tick; 1 }     or LOGERR("Wake-up: $@");
 	eval { $controller->tick; 1 } or LOGERR("Controller: $@");
 
 	# Reload when the web UI saved a new configuration
@@ -70,6 +74,7 @@ while ($running) {
 			LOGINF('Configuration changed, reloading');
 			($cfg, $cfg_mtime) = load_config();
 			$controller = build_controller($cfg, $controller);
+			$wakeup = build_wakeup($cfg, $controller, $wakeup);
 			my $new_topic = $cfg->{mqtt}{topic} || 'lox2hue';
 			if ($new_topic ne $topic) {
 				$mqtt->unsubscribe("$topic/+");
@@ -95,8 +100,12 @@ sub on_message {
 	LOGDEB("MQTT $t = $payload");
 	eval {
 		if ($channel eq 'alloff') {
-			$controller->all_off if $payload ne '' && $payload != 0;
-		} else {
+			if ($payload ne '' && $payload != 0) {
+				$wakeup->stop_all;
+				$controller->all_off;
+			}
+		} elsif (!$wakeup->value($channel, $payload)) {
+			$wakeup->channel_used($channel);
 			$controller->value($channel, $payload);
 		}
 		1;
@@ -167,4 +176,18 @@ sub build_controller {
 	$ctl->{bridge_key} = $bridge_key;
 	LOGINF(scalar($ctl->channel_ids) . ' channel(s) active');
 	return $ctl;
+}
+
+sub build_wakeup {
+	my ($c, $ctl, $old) = @_;
+	my @list = @{ $c->{wakeups} || [] };
+	$_->{enabled} = is_enabled($_->{enabled}) ? 1 : 0 for @list;
+	my $w = Lox2Hue::Wakeup->new(
+		controller => $ctl,
+		log        => \&logmsg,
+		wakeups    => \@list,
+		running    => $old ? $old->running : undef,
+	);
+	LOGINF(scalar(grep { $_->{enabled} } @list) . ' wake-up channel(s) active') if @list;
+	return $w;
 }

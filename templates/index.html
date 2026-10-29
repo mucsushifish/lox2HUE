@@ -92,6 +92,31 @@
 <div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_TYPES></div>
 <div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_POWER></div>
 
+<!-- ============================================================ WAKE-UP -->
+<h2 class="lb-section-title"><TMPL_VAR MAIN.H_WAKEUP></h2>
+<p><TMPL_VAR MAIN.WAKEUP_INTRO></p>
+
+<div class="lb-table-scroll">
+<table class="lb-table" id="wakeups">
+	<thead>
+		<tr>
+			<th><TMPL_VAR MAIN.COL_ACTIVE></th>
+			<th><TMPL_VAR MAIN.COL_ID></th>
+			<th><TMPL_VAR MAIN.COL_NAME></th>
+			<th><TMPL_VAR MAIN.COL_WAKE_CHANNEL></th>
+			<th><TMPL_VAR MAIN.COL_WAKE_RAMP></th>
+			<th><TMPL_VAR MAIN.COL_WAKE_COLOR></th>
+			<th></th>
+		</tr>
+	</thead>
+	<tbody></tbody>
+</table>
+</div>
+<p>
+	<button type="button" class="lb-btn lb-btn-sm lb-btn-icon" onclick="addWakeup();"><i class="pi pi-plus"></i> <TMPL_VAR MAIN.BTN_ADD_WAKEUP></button>
+</p>
+<div class="lb-form-help hint"><TMPL_VAR MAIN.HELP_WAKEUP></div>
+
 <!-- ============================================================ ADVANCED -->
 <details class="lb-collapsible">
 	<summary><TMPL_VAR MAIN.H_ADVANCED></summary>
@@ -186,6 +211,7 @@ var i18n = {
 	lightsLoaded: "<TMPL_VAR MAIN.JS_LIGHTS_LOADED>",
 	channelsAdded: "<TMPL_VAR MAIN.JS_CHANNELS_ADDED>",
 	sent:         "<TMPL_VAR MAIN.JS_SENT>",
+	noChannel:    "<TMPL_VAR MAIN.JS_NO_CHANNEL>",
 	remove:       "<TMPL_VAR MAIN.BTN_REMOVE>",
 	types: {
 		rgb_hs:     "<TMPL_VAR MAIN.TYPE_RGB_HS>",
@@ -294,9 +320,82 @@ function addLightChannels(list) {
 	return added;
 }
 
-function updateTestChannels() {
+// Wake-up channels (light alarm): lamp channels that can be faded up
+var WAKE_TYPES = ["rgb_hs", "rgb_xy", "brightness", "bulb"];
+
+function wakeChannelOptions(selected) {
 	var map = {};
-	readChannels().forEach(function(c) { if (c.id) map[c.id] = c.id + (c.name ? " – " + c.name : ""); });
+	readChannels().forEach(function(c) {
+		if (c.id && WAKE_TYPES.indexOf(c.type) >= 0) map[c.id] = c.id + (c.name ? " – " + c.name : "");
+	});
+	if (!Object.keys(map).length) map[""] = i18n.noChannel;
+	else if (selected && !(selected in map)) map[selected] = selected;
+	return options(map, selected);
+}
+
+function colorInput(cls, value) {
+	return '<input class="lb-input ' + cls + '" type="number" min="0" max="100" style="width:4.5em" value="' + esc(value) + '">';
+}
+
+function wakeSwatch(r, g, b) {
+	var c = [r, g, b].map(function(v) { return Math.round(Math.max(0, Math.min(100, Number(v) || 0)) * 2.55); });
+	return "rgb(" + c.join(",") + ")";
+}
+
+function wakeRow(w) {
+	var r = w.r == null ? 100 : w.r, g = w.g == null ? 83 : w.g, b = w.b == null ? 70 : w.b;
+	return '<tr>' +
+		'<td><label class="lb-toggle"><input type="checkbox" class="wk-enabled"' + (w.enabled === "0" ? '' : ' checked') + '><span class="lb-toggle-slider"></span></label></td>' +
+		'<td><input class="lb-input wk-id" type="text" style="width:5em" value="' + esc(w.id) + '"></td>' +
+		'<td><input class="lb-input wk-name" type="text" value="' + esc(w.name) + '"></td>' +
+		'<td><select class="lb-select wk-channel">' + wakeChannelOptions(w.channel) + '</select></td>' +
+		'<td><input class="lb-input wk-ramp" type="number" min="1" max="240" style="width:5em" value="' + esc(w.ramp_min || 45) + '"></td>' +
+		'<td style="white-space:nowrap">R ' + colorInput("wk-r", r) + ' G ' + colorInput("wk-g", g) + ' B ' + colorInput("wk-b", b) +
+		' <span class="wk-swatch" style="display:inline-block;width:1.5em;height:1.5em;vertical-align:middle;border-radius:4px;border:1px solid var(--lb-border, #ccc);background:' + wakeSwatch(r, g, b) + '"></span></td>' +
+		'<td><button type="button" class="lb-btn lb-btn-sm lb-btn-danger lb-btn-icon" title="' + esc(i18n.remove) + '" onclick="$(this).closest(\'tr\').remove(); updateTestChannels();"><i class="pi pi-trash"></i></button></td>' +
+		'</tr>';
+}
+
+function readWakeups() {
+	return $("#wakeups tbody tr").map(function() {
+		var r = $(this);
+		return {
+			enabled:  r.find(".wk-enabled").is(":checked") ? "1" : "0",
+			id:       r.find(".wk-id").val().trim(),
+			name:     r.find(".wk-name").val().trim(),
+			channel:  r.find(".wk-channel").val() || "",
+			ramp_min: String(r.find(".wk-ramp").val()).trim(),
+			r:        String(r.find(".wk-r").val()).trim(),
+			g:        String(r.find(".wk-g").val()).trim(),
+			b:        String(r.find(".wk-b").val()).trim()
+		};
+	}).get();
+}
+
+function renderWakeups(list) {
+	$("#wakeups tbody").html($.map(list, wakeRow).join(""));
+	updateTestChannels();
+}
+
+function refreshWakeChannels() {
+	$("#wakeups .wk-channel").each(function() {
+		$(this).html(wakeChannelOptions($(this).val()));
+	});
+}
+
+function addWakeup() {
+	var used = readChannels().concat(readWakeups()).map(function(c) { return c.id; });
+	var n = 1;
+	while (used.indexOf("w" + n) >= 0) n++;
+	$("#wakeups tbody").append(wakeRow({ id: "w" + n, enabled: "1" }));
+	updateTestChannels();
+}
+
+// Called whenever channels change: test selection and wake-up channel lists
+function updateTestChannels() {
+	refreshWakeChannels();
+	var map = {};
+	readChannels().concat(readWakeups()).forEach(function(c) { if (c.id) map[c.id] = c.id + (c.name ? " – " + c.name : ""); });
 	map.alloff = "alloff";
 	$("#test_channel").html(options(map, $("#test_channel").val()));
 }
@@ -331,6 +430,7 @@ function loadConfig() {
 			$("#" + k).prop("checked", t[k] === "1");
 		});
 		renderChannels(cfg.channels || []);
+		renderWakeups(cfg.wakeups || []);
 		updateExamples();
 		if (b.host && b.user) loadLights(true);
 	}).fail(function(xhr) { showSave(i18n.error + " " + xhr.status, true); });
@@ -363,7 +463,8 @@ function collect() {
 		},
 		mqtt: { topic: $("#mqtt_topic").val().trim() || "lox2hue" },
 		timing: {},
-		channels: readChannels()
+		channels: readChannels(),
+		wakeups:  readWakeups()
 	};
 	["transition_ms", "dimmer_min", "dimmer_max", "burst_ms", "watch_step_ms", "watch_settle_ms", "watch_max_fixes", "off_repeat_ms"].forEach(function(k) {
 		cfg.timing[k] = String($("#" + k).val()).trim();
@@ -428,7 +529,12 @@ $(function() {
 		var ch = { target: $(this).val(), target_id: String(row.find(".ch-target-id").val()) };
 		row.find(".ch-target-id-cell").html(targetIdField(ch));
 	});
-	$("#channels").on("input change", ".ch-id, .ch-name", updateTestChannels);
+	$("#channels").on("input change", ".ch-id, .ch-name, .ch-type", updateTestChannels);
+	$("#wakeups").on("input change", ".wk-id, .wk-name", updateTestChannels);
+	$("#wakeups").on("input change", ".wk-r, .wk-g, .wk-b", function() {
+		var row = $(this).closest("tr");
+		row.find(".wk-swatch").css("background", wakeSwatch(row.find(".wk-r").val(), row.find(".wk-g").val(), row.find(".wk-b").val()));
+	});
 	loadConfig();
 });
 </script>
