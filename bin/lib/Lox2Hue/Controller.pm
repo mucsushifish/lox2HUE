@@ -22,6 +22,8 @@ my %DEFAULTS = (
 	dimmer_min      => 15,
 	dimmer_max      => 100,
 	burst_ms        => [ 1000, 2000, 3500, 5000, 8000 ],
+	# after the bridge reports a lamp back online: send at once, then confirm
+	online_ms       => [ 1000, 3000 ],
 	watch_step_ms   => 1500,
 	watch_settle_ms => 3000,
 	watch_max_fixes => 3,
@@ -162,6 +164,11 @@ sub _send_smart {
 		# off -> on: the lamp probably had no power, burst after power-on
 		$slot->{on} = 1;
 		$self->_start_burst($slot, $now);
+		# with events (v2) the bridge tells us when the lamp is back
+		if ($slot->{target} eq 'light' && $self->{driver}->can('changed')) {
+			my $state = $self->{driver}->get_light($slot->{target_id});
+			$slot->{was_down} = 1 if $state && !$state->{reachable};
+		}
 	} elsif ($slot->{burst}) {
 		# colour change during a burst: restart with the new command
 		$self->_start_burst($slot, $now);
@@ -204,19 +211,17 @@ sub tick {
 	my $drv = $self->{driver};
 	$drv->poll if $drv->can('poll');
 	$self->_process_bursts if $self->{opts}{enable_burst};
-	if ($self->{opts}{enable_watch}) {
-		$self->_check_changed if $drv->can('changed');
-		$self->_watch_step;
-	}
+	$self->_check_changed if $drv->can('changed');
+	$self->_watch_step if $self->{opts}{enable_watch};
 	return;
 }
 
 sub _process_bursts {
 	my ($self) = @_;
 	my $now   = $self->{now}->();
-	my $steps = $self->{opts}{burst_ms};
 	for my $slot (values %{ $self->{slots} }) {
 		my $b = $slot->{burst} or next;
+		my $steps = $b->{steps} || $self->{opts}{burst_ms};
 		next if $now - $b->{start} < $steps->[ $b->{step} ];
 		$self->_send_fast($slot);
 		$b->{step}++;
@@ -255,15 +260,39 @@ sub _watch_step {
 	return;
 }
 
-# Event from the bridge (driver v2): check the affected lamps right away
+# Event from the bridge (driver v2): check the affected lamps right away.
+# Reachability is followed for all lamps without permanent power, also during
+# a burst, so a lamp gets its command as soon as the bridge sees it again.
 sub _check_changed {
 	my ($self) = @_;
 	my @ids = $self->{driver}->changed or return;
 	my $now = $self->{now}->();
 	for my $id (@ids) {
 		my $slot = $self->{slots}{"light:$id"} or next;
-		$self->_check_slot($slot, $now) if $self->_watchable($slot, $now);
+		next if $slot->{powermode} eq 'normal' || !$slot->{on} || !$slot->{cmd};
+		my $state = $self->{driver}->get_light($id) or next;
+		if (!$state->{reachable}) {
+			$slot->{was_down} = 1;
+			next;
+		}
+		if ($slot->{was_down}) {
+			$self->_back_online($slot, $now);
+			next;
+		}
+		$self->_check_slot($slot, $now) if $self->{opts}{enable_watch} && $self->_watchable($slot, $now);
 	}
+	return;
+}
+
+sub _back_online {
+	my ($self, $slot, $now) = @_;
+	$slot->{was_down} = 0;
+	$slot->{fixes}    = 0;
+	$self->_log(6, "light $slot->{target_id} back online, sending");
+	$self->_send_fast($slot);
+	$slot->{burst} = $self->{opts}{enable_burst}
+		? { start => $now, step => 0, steps => $self->{opts}{online_ms} }
+		: undef;
 	return;
 }
 
@@ -276,9 +305,7 @@ sub _check_slot {
 		return;
 	}
 	if ($slot->{was_down}) {
-		$slot->{was_down} = 0;
-		$self->_log(6, "light $slot->{target_id} back online, burst");
-		$self->_start_burst($slot, $now);
+		$self->_back_online($slot, $now);
 		return;
 	}
 	if (needs_fix($slot->{cmd}, $state)) {

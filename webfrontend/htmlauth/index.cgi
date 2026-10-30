@@ -60,7 +60,15 @@ $navbar{90}{URL}    = 'index.cgi?form=logs';
 $navbar{90}{active} = 1 if $form eq 'logs';
 
 $templateout->param('LBPPLUGINDIR', $lbpplugindir);
-$templateout->param('LOGLIST', LoxBerry::Web::loglist_html()) if $form eq 'logs';
+if ($form eq 'logs') {
+	my $loglist = LoxBerry::Web::loglist_html() // '';
+	# LoxBerry only shows the log level selection next to existing log entries
+	if ($loglist !~ /loglevel_\Q$lbpplugindir\E/) {
+		$templateout->param('LOGLEVEL', LoxBerry::Web::loglevel_select_html(FORMID => "loglevel_$lbpplugindir"));
+		$templateout->param('NOLOGS', 1);
+	}
+	$templateout->param('LOGLIST', $loglist);
+}
 
 LoxBerry::Web::lbheader("lox2HUE V$version", 'https://github.com/mucsushifish/lox2hue', 'help.html', 'nojqm');
 print LoxBerry::Log::get_notifications_html($lbpplugindir);
