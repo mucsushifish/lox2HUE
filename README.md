@@ -20,6 +20,18 @@ LoxBerry 4.0 oder neuer, weil die Weboberfläche das LoxBerry Design System nutz
 
 Das Repository als ZIP herunterladen und in LoxBerry unter Plugin-Verwaltung installieren. Danach in der Plugin-Seite die IP-Adresse der Bridge eintragen, den Knopf auf der Bridge drücken, auf Koppeln klicken und speichern.
 
+## Automatische Updates
+
+Ab Version 0.2.3 bietet das Plugin automatische Updates an. Diese Version muss einmal von Hand installiert werden, danach lässt sich in der LoxBerry-Plugin-Verwaltung wählen, ob LoxBerry nur benachrichtigt oder Releases bzw. Pre-Releases selbst installiert. LoxBerry prüft einmal täglich `release.cfg` und `prerelease.cfg` aus dem main-Branch.
+
+Ablauf für ein neues Release:
+
+1. `VERSION` in `plugin.cfg` erhöhen und nach main mergen.
+2. Auf GitHub ein Release mit dem Tag `v<Version>` auf main erstellen (bei einer Testversion „Set as a pre-release“ anhaken).
+3. Erst danach in `release.cfg` (bzw. `prerelease.cfg`) `VERSION`, `ARCHIVEURL` und `INFOURL` auf die neue Version setzen und nach main bringen.
+
+`ARCHIVEURL` zeigt auf das Quellcode-Archiv des Tags, ein eigenes ZIP muss nicht hochgeladen werden.
+
 ## Anbindung in Loxone
 
 Je Lampe ein virtueller Ausgang, der den Wert an den LoxBerry schickt (MQTT-Bridge 
