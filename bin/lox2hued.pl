@@ -26,13 +26,28 @@ use Lox2Hue::Driver::HueV2;
 my $cfgfile = "$lbpconfigdir/lox2hue.json";
 my $running = 1;
 
-my $log = LoxBerry::Log->new(
-	name    => 'daemon',
-	package => $lbpplugindir,
-	addtime => 1,
-	stderr  => 1,
-);
-LOGSTART('lox2hue daemon started');
+# One log session per day: each session is a new entry in LoxBerry's log
+# database, so the log page lists the daemon again even if that database
+# lost its entries, and a debug log does not grow without limit.
+my $log;
+my $log_day;
+sub start_log {
+	my ($title) = @_;
+	if ($log) {
+		LOGEND('Continued in a new log file');
+		undef $log;
+	}
+	$log = LoxBerry::Log->new(
+		name    => 'daemon',
+		package => $lbpplugindir,
+		addtime => 1,
+		stderr  => 1,
+	);
+	$log->default;
+	LOGSTART($title);
+	$log_day = (localtime)[7];
+}
+start_log('lox2hue daemon started');
 
 # Severity numbers as used by LoxBerry::Log
 my %logfn = (3 => \&LOGERR, 4 => \&LOGWARN, 6 => \&LOGINF, 7 => \&LOGDEB);
@@ -69,6 +84,7 @@ while ($running) {
 	# Reload when the web UI saved a new configuration
 	if (time() - $last_cfg_check >= 2) {
 		$last_cfg_check = time();
+		start_log('lox2hue daemon running, new day') if (localtime)[7] != $log_day;
 		my $mtime = (stat $cfgfile)[9] // 0;
 		if ($mtime != $cfg_mtime) {
 			LOGINF('Configuration changed, reloading');

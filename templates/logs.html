@@ -1,3 +1,7 @@
 <div class="lb-content">
+<TMPL_IF NOLOGS>
+<TMPL_VAR LOGLEVEL>
+<div class="lb-callout"><TMPL_VAR LOGS.NO_LOGS></div>
+</TMPL_IF>
 <TMPL_VAR LOGLIST>
 </div>
