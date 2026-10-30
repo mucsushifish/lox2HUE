@@ -73,6 +73,7 @@ $mqtt->subscribe("$topic/+", \&on_message);
 LOGOK("Subscribed to $topic/+");
 
 my $last_cfg_check = 0;
+my $last_log_check = time();
 while ($running) {
 	my $connected = eval { $mqtt->tick(0.05) };
 	LOGERR("MQTT: $@") if $@;
@@ -85,6 +86,7 @@ while ($running) {
 	if (time() - $last_cfg_check >= 2) {
 		$last_cfg_check = time();
 		start_log('lox2hue daemon running, new day') if (localtime)[7] != $log_day;
+		check_log_entry() if time() - $last_log_check >= 3600;
 		my $mtime = (stat $cfgfile)[9] // 0;
 		if ($mtime != $cfg_mtime) {
 			LOGINF('Configuration changed, reloading');
@@ -126,6 +128,18 @@ sub on_message {
 		}
 		1;
 	} or LOGERR("Channel $channel: $@");
+}
+
+# LoxBerry deletes and recreates its log database when it is corrupted, and
+# removes entries whose file is gone. The log page then no longer lists the
+# daemon, so it starts a new session when its entry has disappeared.
+sub check_log_entry {
+	$last_log_check = time();
+	my @logs = eval { LoxBerry::Log::get_logs($lbpplugindir, 'daemon') };
+	# an exception or a single undef means the database could not be read
+	return if $@ || (@logs == 1 && !defined $logs[0]);
+	start_log('lox2hue daemon running, log entry was missing') if !@logs;
+	return;
 }
 
 sub load_config {
